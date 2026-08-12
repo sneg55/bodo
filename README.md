@@ -1,5 +1,14 @@
 # bodo
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-5224%20passing-brightgreen)](tests)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](tsconfig.json)
+[![Next.js](https://img.shields.io/badge/Next.js-16.2.12-black?logo=nextdotjs&logoColor=white)](package.json)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](wrangler.jsonc)
+[![Airtable](https://img.shields.io/badge/Airtable-source%20of%20truth-18BFFF?logo=airtable&logoColor=white)](docs/data-model.md)
+[![MCP](https://img.shields.io/badge/MCP-server-D97757)](docs/api.md#mcp)
+[![Live demo](https://img.shields.io/badge/demo-live-success)](https://bodo.nsawinyh.workers.dev)
+
 Open-source speaker and session operations for conferences. Collect proposals, review and
 score them, decide, tell people, and publish a schedule.
 

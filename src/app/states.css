@@ -1,0 +1,32 @@
+/*
+ * Reduced motion. Nothing in the app honoured it before, and the polish pass
+ * added enter animations in five places (the widget grid, the command-palette
+ * groups, the wizard steps, the portal task list, the collapsible panel), so
+ * the gap was widening rather than closing. One systemic rule rather than a
+ * `motion-reduce:` variant repeated at every call site.
+ *
+ * `animation-iteration-count` is the load-bearing line, not the duration: the
+ * skeletons are `animate-pulse`, which is infinite, and shortening its duration
+ * alone would strobe them. Capping the count lets it settle instead.
+ *
+ * `animate-spin` is exempt deliberately. A spinner reports that work is in
+ * flight, and freezing one turns a pending control into an apparently dead one,
+ * which is exactly the failure ButtonLink was built to prevent.
+ *
+ * This comment was stranded in `components.css` when the stylesheet was split by
+ * layer: the rules moved here, the prose did not, and it was left unterminated at
+ * the end of that file. An unterminated comment is swallowed to EOF by the browser
+ * and by Lightning CSS, so nothing rendered wrong and only `biome check` could see
+ * it. Kept with the rules it explains rather than deleted.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin),
+  *:not(.animate-spin)::before,
+  *:not(.animate-spin)::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+}

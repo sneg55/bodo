@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Split by layer because this file passed the 400-line rule. THE IMPORT ORDER
+ * IS LOAD-BEARING and must not be reshuffled:
+ *
+ *   tokens      the @theme map plus the light and dark palettes
+ *   base        @layer base — reset, house typography, the data-slot treatment
+ *   components  the UNLAYERED house-style overrides, then the @utility set
+ *   states      the reduced-motion policy
+ *
+ * `components.css` holds rules that sit outside every cascade layer on purpose:
+ * Tailwind emits `@layer theme, base, components, utilities`, so a rule in
+ * `base` loses to any utility class, and the two properties the shadcn variants
+ * also set (font-size, transition-property) only win from outside the layers.
+ * Moving them into `@layer base` would silently revert both. The comment above
+ * each block records what it beats and why.
+ */
+@import "./tokens.css";
+@import "./base.css";
+@import "./components.css";
+@import "./states.css";

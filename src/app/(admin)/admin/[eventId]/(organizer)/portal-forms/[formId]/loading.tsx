@@ -1,0 +1,32 @@
+// The Suspense boundary for the portal form wizard: the rail and one step's worth of cards.
+
+import { Skeleton } from '@/components/ui/skeleton'
+
+export default function PortalFormEditorLoading() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1.5">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-56" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-20" />
+        </div>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
+        <div className="flex flex-col gap-2">
+          {[0, 1, 2].map((row) => (
+            <Skeleton key={row} className="h-12 w-full rounded-lg" />
+          ))}
+        </div>
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-16 w-full rounded-xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+        </div>
+      </div>
+    </div>
+  )
+}

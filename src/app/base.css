@@ -1,0 +1,87 @@
+/* Document base layer: reset, house typography, the data-slot label treatment. */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* Avoids single-word last lines in prose. A component that needs a
+       different wrap sets its own utility, which wins from the utilities
+       layer. */
+    text-wrap: pretty;
+  }
+  html {
+    @apply font-sans;
+  }
+
+  /*
+   * House style, applied through the data-slot attributes shadcn already emits,
+   * so nothing under src/components/ui is edited to carry project styling (see
+   * .claude/rules/ui-shadcn.md). One place owns the treatment.
+   *
+   * Chrome buttons read as machine labels, the reference's loudest signal. A
+   * button whose label is user data (an event name, a saved view, a field) opts
+   * out with the plain-label utility below, because uppercasing text someone
+   * typed is a different thing from uppercasing Filters.
+   *
+   * The trigger slots below are not redundant with the button slot. Base UI
+   * merges a trigger's own props over the element passed to its render prop, so
+   * a DropdownMenuTrigger rendering a Button emits data-slot of
+   * dropdown-menu-trigger and the button rule never matches it. That is why
+   * Options and Saved Views sat in sentence case beside an uppercase Columns
+   * until these were listed.
+   */
+  [data-slot="button"],
+  [data-slot="dropdown-menu-trigger"],
+  [data-slot="popover-trigger"],
+  [data-slot="dialog-trigger"],
+  [data-slot="sheet-trigger"],
+  [data-slot="alert-dialog-trigger"],
+  [data-slot="alert-dialog-action"],
+  [data-slot="alert-dialog-cancel"] {
+    @apply font-mono uppercase tracking-[0.09em];
+  }
+  [data-slot="tabs-trigger"] {
+    @apply font-mono uppercase tracking-[0.09em];
+  }
+  [data-slot="table-head"] {
+    @apply font-mono text-[0.625rem] font-medium uppercase tracking-[0.1em];
+  }
+  [data-slot="table"] {
+    font-variant-numeric: tabular-nums;
+  }
+  [data-slot="input"],
+  [data-slot="textarea"],
+  [data-slot="select-trigger"] {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Counts live in badges and on the status tab strip, and both recount as
+     submissions move, so proportional numerals shift the label under them. */
+  [data-slot="badge"],
+  [data-slot="tabs-trigger"] {
+    font-variant-numeric: tabular-nums;
+  }
+  /*
+   * Dialog and Sheet descriptions shipped without the wrapping their siblings
+   * have: alert-dialog.tsx:119 and alert.tsx:55 both carry
+   * `text-balance md:text-pretty`, dialog.tsx:116 and sheet.tsx:108 carry
+   * neither, and drawer.tsx:191 has only the first half. Sheet is this
+   * project's right-hand drawer, so the gap orphaned description text on every
+   * drawer in the app. Base layer, not unlayered, so a call site that wants a
+   * different wrap still wins from the utilities layer.
+   */
+  [data-slot="dialog-description"],
+  [data-slot="sheet-description"],
+  [data-slot="drawer-description"] {
+    @apply text-balance md:text-pretty;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-heading tracking-[-0.02em];
+    /* Headings are short and wrap badly at two lines; balance evens them.
+       Body copy uses `pretty` instead, on body above. */
+    text-wrap: balance;
+  }
+}

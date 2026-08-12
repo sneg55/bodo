@@ -1,0 +1,160 @@
+/* Design tokens: the theme map and the two palettes. Imported first by globals.css. */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-display);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  /* The submission lifecycle and the track chips are the only places colour
+     carries meaning rather than decoration. They were hardcoded Tailwind hues
+     before these existed; see StatusChipBadge. */
+  --color-status-accepted: var(--status-accepted);
+  --color-status-pending: var(--status-pending);
+  --color-status-queue: var(--status-queue);
+  --color-status-declined: var(--status-declined);
+  --color-status-neutral: var(--status-neutral);
+  --color-track: var(--track);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * Light theme. `:root` stays light and `.dark` carries the dark values even
+ * though dark is the default the ThemeProvider applies, because `dark:`
+ * variants across the app are keyed on `.dark` being present. Inverting the two
+ * would silently flip every one of them.
+ *
+ * Corners are square: --radius drives every --radius-* step above, so the one
+ * value below squares off all 200-odd `rounded-lg/xl/md/sm` sites at once.
+ * `rounded-full` reads a different variable and stays round, which is what the
+ * avatars and status dots want.
+ */
+:root {
+  --background: oklch(0.977 0.003 90);
+  --foreground: oklch(0.16 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.16 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.16 0 0);
+  --primary: oklch(0.55 0.098 82);
+  --primary-foreground: oklch(0.99 0.004 90);
+  --secondary: oklch(0.955 0.005 90);
+  --secondary-foreground: oklch(0.22 0 0);
+  --muted: oklch(0.955 0.005 90);
+  --muted-foreground: oklch(0.5 0.006 90);
+  --accent: oklch(0.945 0.014 88);
+  --accent-foreground: oklch(0.32 0.06 82);
+  --destructive: oklch(0.53 0.208 26);
+  --border: oklch(0.898 0.006 90);
+  --input: oklch(0.898 0.006 90);
+  --ring: oklch(0.55 0.098 82);
+
+  --status-accepted: oklch(0.48 0.098 187);
+  --status-pending: oklch(0.55 0.098 82);
+  --status-queue: oklch(0.48 0.19 291);
+  --status-declined: oklch(0.49 0.196 26);
+  --status-neutral: oklch(0.55 0.006 90);
+  --track: oklch(0.51 0.2 5);
+
+  --chart-1: oklch(0.55 0.098 82);
+  --chart-2: oklch(0.51 0.2 5);
+  --chart-3: oklch(0.48 0.098 187);
+  --chart-4: oklch(0.48 0.19 291);
+  --chart-5: oklch(0.53 0.208 26);
+
+  --radius: 0.125rem;
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.16 0 0);
+  --sidebar-primary: oklch(0.55 0.098 82);
+  --sidebar-primary-foreground: oklch(0.99 0.004 90);
+  --sidebar-accent: oklch(0.945 0.014 88);
+  --sidebar-accent-foreground: oklch(0.32 0.06 82);
+  --sidebar-border: oklch(0.898 0.006 90);
+  --sidebar-ring: oklch(0.55 0.098 82);
+}
+
+/*
+ * Dark theme, and the one the reference is drawn from: near-black ground, one
+ * gold accent, hairline borders, no shadows. Gold is decoration; magenta, teal,
+ * violet and red only ever mean something.
+ */
+.dark {
+  --background: oklch(0 0 0);
+  --foreground: oklch(0.955 0 0);
+  --card: oklch(0.155 0 0);
+  --card-foreground: oklch(0.955 0 0);
+  --popover: oklch(0.155 0 0);
+  --popover-foreground: oklch(0.955 0 0);
+  --primary: oklch(0.867 0.101 88);
+  --primary-foreground: oklch(0.12 0 0);
+  --secondary: oklch(0.195 0 0);
+  --secondary-foreground: oklch(0.955 0 0);
+  --muted: oklch(0.195 0 0);
+  --muted-foreground: oklch(0.63 0 0);
+  --accent: oklch(0.238 0.017 88);
+  --accent-foreground: oklch(0.867 0.101 88);
+  --destructive: oklch(0.63 0.222 25);
+  --border: oklch(1 0 0 / 13%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.867 0.101 88 / 55%);
+
+  --status-accepted: oklch(0.79 0.132 184);
+  --status-pending: oklch(0.867 0.101 88);
+  --status-queue: oklch(0.71 0.16 292);
+  --status-declined: oklch(0.68 0.196 24);
+  --status-neutral: oklch(0.63 0 0);
+  --track: oklch(0.68 0.243 4);
+
+  --chart-1: oklch(0.867 0.101 88);
+  --chart-2: oklch(0.68 0.243 4);
+  --chart-3: oklch(0.79 0.132 184);
+  --chart-4: oklch(0.71 0.16 292);
+  --chart-5: oklch(0.68 0.196 24);
+
+  --sidebar: oklch(0.09 0 0);
+  --sidebar-foreground: oklch(0.955 0 0);
+  --sidebar-primary: oklch(0.867 0.101 88);
+  --sidebar-primary-foreground: oklch(0.12 0 0);
+  --sidebar-accent: oklch(0.238 0.017 88);
+  --sidebar-accent-foreground: oklch(0.867 0.101 88);
+  --sidebar-border: oklch(1 0 0 / 13%);
+  --sidebar-ring: oklch(0.867 0.101 88 / 55%);
+}

@@ -1,0 +1,130 @@
+/*
+ * Unlayered, and that is the whole point of this block.
+ *
+ * Tailwind emits `@layer theme, base, components, utilities`, so anything in
+ * `@layer base` above LOSES to a utility class no matter how specific it is.
+ * The two properties below are the two the shadcn base variants also set, so
+ * for as long as they lived in that block they never applied: `text-sm` in
+ * ui/button.tsx won the font-size, and `transition-all` won the transition.
+ * The mono/uppercase/tracking half of the house style had nothing competing
+ * with it, so it did apply, which is why only half of this was ever visible.
+ *
+ * Unlayered CSS beats every cascade layer, so these two win. The cost is that
+ * a call site can no longer override them with a utility, hence the explicit
+ * opt-outs: `plain-label` for a label that is user data, and `normal-case` for
+ * something like the wordmark that is a name rather than a command.
+ */
+[data-slot="button"]:not(.plain-label):not(.normal-case),
+[data-slot="dropdown-menu-trigger"]:not(.plain-label):not(.normal-case),
+[data-slot="popover-trigger"]:not(.plain-label):not(.normal-case),
+[data-slot="dialog-trigger"]:not(.plain-label):not(.normal-case),
+[data-slot="sheet-trigger"]:not(.plain-label):not(.normal-case),
+[data-slot="alert-dialog-trigger"]:not(.plain-label):not(.normal-case),
+[data-slot="tabs-trigger"]:not(.plain-label):not(.normal-case) {
+  font-size: 0.6875rem;
+}
+
+/*
+ * `transition-all` in the shadcn base variants animates every property that
+ * can change, including layout and the focus ring. These are the properties
+ * these controls actually change; duration and easing still come from the
+ * utility. Progress is deliberately absent: a determinate bar really does
+ * animate its width.
+ */
+[data-slot="button"],
+[data-slot="badge"],
+[data-slot="toggle"],
+[data-slot="tabs-trigger"],
+[data-slot="accordion-trigger"],
+[data-slot="switch"] {
+  transition-property: color, background-color, border-color, box-shadow, opacity, translate;
+}
+
+/* Opt out of the machine-label treatment. See the button rule above. */
+@utility plain-label {
+  @apply font-sans text-sm normal-case tracking-normal;
+}
+
+@utility meta {
+  @apply font-mono text-[0.65625rem] font-medium uppercase tracking-[0.11em];
+}
+
+@utility hairline {
+  @apply h-px flex-1 bg-border;
+}
+
+/*
+ * Hit areas. A control smaller than its comfortable target grows a transparent
+ * pseudo-element instead of growing itself, so nothing in the layout moves.
+ *
+ * These exist because the first polish pass hand-rolled the same idea four
+ * different ways (a centred `after:size-10`, a full-width `after:inset-x-0
+ * after:h-10`, a 40x36 chip variant and a 30px toolbar variant). One definition,
+ * reused, is the rule the five shared primitives already follow.
+ *
+ * THE CONSTRAINT THAT DECIDES WHICH ONE: two hit areas must never overlap, or a
+ * press lands on whichever won the stacking order. Measure the pitch (control
+ * size + the row's gap) before reaching for `hit-area`:
+ *   - room on every side          -> `hit-area`
+ *   - room above and below only   -> `hit-area-y` (a wide control in a tight row)
+ *   - pitch under 40px            -> `hit-area-[Npx]`, N = the pitch, so
+ *                                    neighbouring targets meet and never cross
+ */
+@utility hit-area {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    height: 2.5rem;
+    width: 2.5rem;
+    translate: -50% -50%;
+  }
+}
+
+@utility hit-area-y {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 2.5rem;
+    translate: 0 -50%;
+  }
+}
+
+@utility hit-area-* {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    height: --value([length]);
+    width: --value([length]);
+    translate: -50% -50%;
+  }
+}
+
+/*
+ * Full width, N tall. The case this exists for is a WIDE control in a tight
+ * column: a row of text buttons that can wrap, a stacked list of link rows.
+ * `hit-area-y` is fixed at 40 and overlaps when the row pitch is under that,
+ * while the square `hit-area-[Npx]` would be NARROWER than the control and
+ * shrink its horizontal reach. Neither fits, so this does.
+ */
+@utility hit-area-y-* {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: --value([length]);
+    translate: 0 -50%;
+  }
+}

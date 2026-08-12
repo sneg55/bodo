@@ -1,0 +1,233 @@
+{
+  // Cloudflare Workers config for the OpenNext build. See BUILD_SPEC section 7.1.
+  //
+  // Before the first `npm run cf:preview` or `npm run deploy`, someone with account
+  // access has to create the resources and paste the ids below. These are the only
+  // manual setup steps, and they need an interactive login:
+  //
+  //   wrangler login
+  //   wrangler r2 bucket create bodo-uploads
+  //   wrangler r2 bucket create bodo-inc-cache
+  //   wrangler kv namespace create BODO_KV
+  //
+  // Done on 2026-08-08: both buckets exist and the KV id below is real. Anyone
+  // recreating this in a different account has to rerun the three commands and
+  // replace that id, since it is account-scoped rather than secret.
+  //
+  // Then run `npm run cf:typegen` to regenerate worker-configuration.d.ts.
+  //
+  // Before `npm run deploy`, also set the deploy-time vars and secrets listed at
+  // the bottom of this file. There is deliberately no APP_URL default here: a
+  // localhost fallback does not fail, it silently emails localhost magic links.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bodo",
+
+  // NOT `.open-next/worker.js`. That generated worker exports only `fetch`, and
+  // Cloudflare will not deliver a Cron Trigger to a Worker with no `scheduled()`
+  // handler, so the crons below would never fire. `src/entrypoints/worker.ts`
+  // wraps it: delegates fetch, adds scheduled, re-exports the Durable Objects.
+  "main": "src/entrypoints/worker.ts",
+
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // OFF, and it is not a size tweak. Wrangler defaults this to true
+  // (`wrangler/config-schema.json`), which is esbuild's `keepNames`: every function in the
+  // bundle gets a `__name(fn, "fn")` call injected beside it so `Function.name` survives
+  // minification. `__name` is a helper esbuild defines inside the worker bundle.
+  //
+  // next-themes builds its no-flash script by STRINGIFYING a function and inlining the
+  // result into the page `<head>`. With keepNames on, the injected call is stringified
+  // along with it, so every HTML response this app serves carried:
+  //
+  //     __name(k2, "k2");
+  //     if (d2) k2(d2); else try { ... k2(d3) } catch {}
+  //
+  // and the browser, which has no `__name`, threw `ReferenceError: __name is not defined`
+  // on that line before reaching either call. The script that applies the stored theme
+  // before first paint never ran, on any page, so the theme only landed once React
+  // hydrated. That is the whole job of the script, and it was silently dead: the exception
+  // is in the console and nothing else shows it.
+  //
+  // What is given up is real but small: function names in a stack trace from a minified
+  // worker. The theme applying on first paint is worth more than that.
+  "keep_names": false,
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  "observability": {
+    "enabled": true
+  },
+
+  "r2_buckets": [
+    {
+      // User uploads: headshots, slides, documents. Written by direct-to-R2 PUTs
+      // through the Worker, streamed, never buffered. See BUILD_SPEC section 5.2.
+      "binding": "BODO_UPLOADS",
+      "bucket_name": "bodo-uploads"
+    },
+    {
+      // OpenNext incremental cache, wrapped in the regional cache. See open-next.config.ts.
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "bodo-inc-cache"
+    }
+  ],
+
+  "kv_namespaces": [
+    {
+      // Rate limits and other best-effort counters ONLY. Magic-link single-use
+      // enforcement is NOT here: KV is eventually consistent with no atomic
+      // read-modify-write, so two verifications of the same token can both win.
+      // That job belongs to the ClaimGuard Durable Object below.
+      "binding": "BODO_KV",
+      "id": "f2e949ca578a47b29802a2c26c33725f"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      {
+        // Sharded tag cache: revalidateTag runs on nearly every write here, which
+        // is exactly the load the D1 tag cache is documented as unsuitable for.
+        "name": "NEXT_TAG_CACHE_DO_SHARDED",
+        "class_name": "DOShardedTagCache"
+      },
+      {
+        // Deduplicates concurrent ISR revalidations. The class is `DOQueueHandler`,
+        // not `DurableObjectQueue`: verified against the `export {}` list in the
+        // built .open-next/worker.js, which is the only authority on these names.
+        "name": "NEXT_CACHE_DO_QUEUE",
+        "class_name": "DOQueueHandler"
+      },
+      {
+        // Atomic single-use consumption of magic-link `jti` values, and the
+        // claim/lease step for EmailOutbox rows. Both need compare-and-swap,
+        // which neither KV nor Airtable provides. See BUILD_SPEC sections 4 and 5.3.
+        "name": "BODO_CLAIM_GUARD",
+        "class_name": "ClaimGuard"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["DOShardedTagCache", "DOQueueHandler"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["ClaimGuard"]
+    }
+  ],
+
+  "triggers": {
+    // Outbox drain, a slower Accelevents retry sweep, and the two-minute slot that
+    // carries both the AI pre-screen queue and the import sweep. These strings are
+    // matched character for character by CRON_ROUTES in src/entrypoints/worker.ts:
+    // Cloudflare hands back the literal expression, so reformatting one here silently
+    // unroutes it. A schedule here with no route there logs and does nothing; a route
+    // there with no schedule here never fires. Both halves of every entry, or neither.
+    //
+    // The two-minute slot is the tightest of the three because it carries the two jobs
+    // somebody WATCHES. An organizer presses pre-screen and reads a progress line, and
+    // ten jobs every two minutes finishes a forty-abstract round inside a demo; an
+    // organizer running an import watches it advance one phase per invocation. They
+    // share one expression rather than taking two, because Cloudflare caps how many
+    // cron triggers a Worker may have, and CRON_ROUTES maps this one to both paths.
+    "crons": ["*/5 * * * *", "17 * * * *", "*/2 * * * *"]
+  },
+
+  "vars": {
+    "EMAIL_PROVIDER": "resend",
+    // Flip to "0" and set ACCELEVENTS_API_KEY to go live. The env schema requires
+    // the key whenever this is "0", so the two cannot drift apart.
+    "ACCELEVENTS_MOCK": "1",
+
+    // Same shape, same reason, for the three AI surfaces. Canned output computed from
+    // this event's own data, labelled as a sample everywhere it renders. Setting the
+    // ANTHROPIC_API_KEY secret alone does NOT go live: this flag is what selects the
+    // client, and flipping it to "0" is what makes the key mandatory.
+    //
+    // **"0" as of 2026-08-09: the AI surfaces call the real model.** The
+    // ANTHROPIC_API_KEY secret is set on this Worker, which env-checks.ts requires
+    // before this flag may be "0" at all. Two consequences to know about, because this
+    // deployment is public with DEMO_MODE on and therefore anyone can reach them: the ⌘K
+    // ask surface and the dashboard proposal call the model per press. The pre-screen
+    // cron does NOT spend on its own: `drainPrescreenJobs` calls the model only inside its
+    // loop over `eligiblePrescreenJobs`, so an empty queue costs an Airtable read and
+    // nothing else, and jobs exist only after an organizer presses pre-screen. Turning
+    // this back to "1" is the whole rollback, and it needs no secret change.
+    "AI_MOCK": "0",
+
+    // Which event the speaker portal serves. Required once AIRTABLE_BASE_ID is set:
+    // `portalEventId()` refuses to guess, because guessing means showing one event's
+    // submissions inside another event's portal. Not a secret, it is a record id, so
+    // it lives here in source rather than as a `wrangler secret`.
+    //
+    // This is the record id of the seeded "AI Engineer Sandbox". It is deployment
+    // specific: point it at the event this deployment is for. The portal renders an
+    // empty list rather than an error when this is wrong, so a stale value here looks
+    // like a speaker with no submissions.
+    "PORTAL_EVENT_ID": "recVZa0gqwt9VaNw3",
+
+    // Turns on the strict env schema, so a deploy missing any required secret fails
+    // on its first request naming every absent key instead of half-working.
+    "DEPLOY_ENV": "production",
+
+    // Demo sign-in, which is how anyone gets into THIS deployment: three persona
+    // buttons on /login post to /api/auth/demo and get a session, with no mailbox in
+    // the loop. It does not invent an identity: the three addresses below resolve
+    // through the same `resolveLoginSubject` the magic link uses, so an address with
+    // no AdminUsers or Speakers row signs nobody in. Turn this to "0" for a
+    // deployment that should only admit people who can read their email, and note
+    // that doing so makes RESEND_API_KEY and EMAIL_FROM required again.
+    "DEMO_MODE": "1",
+
+    // Which rows the three persona buttons resolve to. Set here rather than left to the
+    // schema defaults in src/utils/env.ts, because those defaults are the fixture
+    // addresses (@example.com) and this base was seeded with
+    // SEED_EMAIL_DOMAIN=deckllama.com. The mismatch was silent in the sense that matters:
+    // every persona 303'd to /login?error=demo_unavailable and the reason ("no AdminUsers
+    // row") was only in the Worker log. Deployment specific, and the addresses have to
+    // exist in whatever base AIRTABLE_BASE_ID names: two AdminUsers rows and a Speakers row.
+    // TEMPORARY. Traces which await an Airtable read is sitting on, so the next time
+    // every page hangs at once the Worker log says where. Set back to "0" and delete
+    // src/services/airtable/diag.ts once that question is answered.
+    "DIAG_AIRTABLE": "1",
+
+    "DEMO_ADMIN_EMAIL": "organizer@deckllama.com",
+    "DEMO_REVIEWER_EMAIL": "reviewer1@deckllama.com",
+    "DEMO_SPEAKER_EMAIL": "ada@deckllama.com",
+
+    // The deployed origin, used to build magic links, portal links and .ics URLs.
+    // Committed rather than passed with `--var` on purpose: this has no default, and
+    // a forgotten flag does not fail, it silently emails localhost magic links that
+    // nobody outside this machine can open. Deployment specific, and not a secret.
+    "APP_URL": "https://bodo.nsawinyh.workers.dev"
+  }
+
+  // Deploy-time configuration, none of which has a default:
+  //
+  //   Non-secret vars, set with `wrangler deploy --var` or added to "vars" above
+  //   once the real values exist:
+  //     DEPLOY_ENV=production      turns on the strict env schema
+  //     APP_URL=https://<host>     origin used in magic links, portal links, .ics
+  //
+  //   Secrets, never in this file (`wrangler secret put <NAME>`):
+  //     AIRTABLE_TOKEN     (a PAT; legacy Airtable API keys are retired)
+  //     AIRTABLE_BASE_ID
+  //     SESSION_SECRET
+  //     RESEND_API_KEY
+  //     EMAIL_FROM         must be on a VERIFIED domain, not resend.dev
+  //     R2_PUBLIC_BASE_URL
+  //     CRON_SECRET
+  //     ACCELEVENTS_API_KEY  (only when ACCELEVENTS_MOCK=0)
+  //     ANTHROPIC_API_KEY    (only when AI_MOCK=0, which it now is: SET on this Worker)
+  //
+  // With DEPLOY_ENV=production, a deploy missing any of the above fails on its
+  // first request with CFG_SCHEMA_FAIL naming every absent key, rather than
+  // half-working. Locally they live in .dev.vars, which is gitignored.
+}
